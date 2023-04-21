@@ -1,3 +1,4 @@
+from transformers import AutoTokenizer, AutoModel
 from transformers import BertTokenizer, BertConfig, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 from ratsnlp.nlpbook.classification import NsmcCorpus, ClassificationDataset
@@ -11,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
-BATCH_SIZE = 800
+BATCH_SIZE = 512
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -40,7 +41,12 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 
 
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
+#model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
+#model_name='beomi/KcELECTRA-base'
+#model_name='skt/kobert-base-v1'
+model_name='beomi/kobert'
+
+pth_name='kobert_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -128,7 +134,8 @@ for epoch in range(num_epochs):
         if step % 1000 == 0:
             print(f'Epoch {epoch+1} / Step {step+1} - Loss: {epoch_loss/epoch_steps:.5f}')
 
-torch.save(model.state_dict(), 'bert_nsmc.pth')
+
+torch.save(model.state_dict(), pth_name) #'bert_nsmc.pth')
 
 
 # evaluation
