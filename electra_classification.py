@@ -6,8 +6,9 @@ from tqdm import tqdm
 from Korpora import Korpora
 from torch.utils.data import DataLoader 
 from torch.optim import AdamW
-from transformers import AutoTokenizer, AutoModel
-from transformers import BertTokenizer, BertConfig, BertForSequenceClassification, get_linear_schedule_with_warmup
+from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import ElectraTokenizer, ElectraForSequenceClassification, ElectraConfig
+from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
@@ -40,13 +41,12 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 
 
 #os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-#model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
-#model_name='beomi/KcELECTRA-base'
+model_name='beomi/KcELECTRA-base'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'
-model_name='beomi/kobert'
+#model_name='beomi/kobert'
 
-pth_name='kobert_nsmc.pth'
+pth_name='kcelectra_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -55,12 +55,12 @@ else:
     device = torch.device("cpu")
     print('available device: ', device)
 
-tokenizer = BertTokenizer.from_pretrained(
+tokenizer = AutoTokenizer.from_pretrained(
     model_name, do_lower_case=False,
 )
 
-pretrained_model_config = BertConfig.from_pretrained(model_name)
-model = BertForSequenceClassification.from_pretrained(
+pretrained_model_config = ElectraConfig.from_pretrained(model_name)
+model = ElectraForSequenceClassification.from_pretrained(
     model_name,
     config=pretrained_model_config,
 )
@@ -177,6 +177,4 @@ for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
 
 accuracy = accuracy_score(y_true, y_pred)
 print(f'Accuracy: {accuracy}')
-
-
 
