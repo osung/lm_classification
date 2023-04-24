@@ -12,7 +12,14 @@ from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-BATCH_SIZE = 1024 #512
+_my_linux_=1   #if not neuron, set it 0
+
+if _my_linux == 1 :
+    BATCH_SIZE = 512
+    os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+else :
+    BATCH_SIZE = 1024
+
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -40,7 +47,6 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
     return input_ids, attention_masks, labels
 
 
-#os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 model_name='beomi/KcELECTRA-base'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'

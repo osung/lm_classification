@@ -11,7 +11,16 @@ from transformers import BertTokenizer, BertConfig, BertForSequenceClassificatio
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-BATCH_SIZE = 1024 #512
+_my_linux_ = 1
+
+
+if _my_linux_  == 1:
+   BATCH_SIZE = 1024
+   os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+   model_path = '/home/osung/models/huggingface/'
+else :
+    BATCH_SIZE = 512
+
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -39,8 +48,7 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
     return input_ids, attention_masks, labels
 
 
-os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
+model_name=model_path + 'kcbert-base'  #'beomi/kcbert_base'
 #model_name='beomi/KcELECTRA-base-v2022'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kobert'
