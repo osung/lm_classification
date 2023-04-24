@@ -39,9 +39,9 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
     return input_ids, attention_masks, labels
 
 
-#os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-#model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
-#model_name='beomi/KcELECTRA-base'
+os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+model_name='/home/osung/models/huggingface/kcbert-base'  #'beomi/kcbert_base'
+#model_name='beomi/KcELECTRA-base-v2022'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'
 #model_name='beomi/kobert'
@@ -103,7 +103,7 @@ train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_S
 # fine tuning
 
 optimizer = AdamW(model.parameters(), lr=5e-5)
-num_epochs = 5
+num_epochs = 10 #5
 num_training_steps = num_epochs * len(train_dataloader)
 lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
 
