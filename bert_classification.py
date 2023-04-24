@@ -44,9 +44,11 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 #model_name='beomi/KcELECTRA-base'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'
-model_name='beomi/kobert'
+#model_name='beomi/kobert'
+#model_name='snunlp/KR-BERT-char16424'
+model_name='snunlp/KR-SBERT-V40K-klueNLI-augSTS'
 
-pth_name='kobert_nsmc.pth'
+pth_name='snu_sbert_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")

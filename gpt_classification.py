@@ -7,11 +7,12 @@ from Korpora import Korpora
 from torch.utils.data import DataLoader 
 from torch.optim import AdamW
 from transformers import AutoTokenizer, AutoModel, AutoConfig, AutoModelForSequenceClassification
+from transformers import GPT2Tokenizer, GPT2TokenizerFast, GPT2Config, GPT2ForSequenceClassification
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-BATCH_SIZE = 512
+BATCH_SIZE = 700
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -45,12 +46,13 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 #model_name='beomi/kcbert-base'
 #model_name='beomi/kobert'
 #model_name='/home01/hpc56a01/scratch/koGPT/small'
-#model_name='skt/kogpt2-base-v2'
-#model_name='gogamza/kobart-base-v2'    
-#model_name='cosmoquester/bart-ko-base'
-model_name='klue/roberta-large'    
+#model_name='skt/kogpt2-base-v2' X
+#model_name='jaesun/kogpt2-base-v2-finetuned-nsmc'
+#model_name='A2/kogpt2-taf'  X
+model_name='jihae/kogpt2news'
+#model_name='gpt2'
 
-pth_name='roberta-large_nsmc.pth'
+pth_name='kogpt2news_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -60,23 +62,21 @@ else:
     device = torch.device("cpu")
     print('available device: ', device)
 
-tokenizer = AutoTokenizer.from_pretrained(
+tokenizer = GPT2TokenizerFast.from_pretrained(
     model_name, do_lower_case=False,
 )
-print(type(tokenizer))
-
 #tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-#tokenizer.pad_token = tokenizer.eos_token
-#tokenizer.padding_side = 'left'
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = 'left'
 
-pretrained_model_config = AutoConfig.from_pretrained(model_name)
-model = AutoModelForSequenceClassification.from_pretrained(
+pretrained_model_config = GPT2Config.from_pretrained(model_name)
+model = GPT2ForSequenceClassification.from_pretrained(
     model_name,
     config=pretrained_model_config,
 )
-#model.config.pad_token_id = model.config.eos_token_id
+model.config.pad_token_id = model.config.eos_token_id
 
-# parallelization
+#parallelization
 if torch.cuda.device_count() > 1:
     print(f'Using {torch.cuda.device_count()} GPUs.')
     model = torch.nn.DataParallel(model)  
@@ -131,7 +131,7 @@ for epoch in range(num_epochs):
         outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
 
         loss = outputs.loss.mean()
-        logits = outputs.logits
+        #logits = outputs.logits
 
         loss.backward()
 

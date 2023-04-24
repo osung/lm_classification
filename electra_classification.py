@@ -12,7 +12,7 @@ from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-BATCH_SIZE = 1024 #512
+BATCH_SIZE = 2048 #1024 #512
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -41,12 +41,14 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 
 
 #os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name='beomi/KcELECTRA-base'
+#model_name='beomi/KcELECTRA-base'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'
 #model_name='beomi/kobert'
+model_name='monologg/koelectra-base-v3-discriminator'
+#model_name='krevas/finance-koelectra-base-discriminator'    
 
-pth_name='kcelectra_nsmc.pth'
+pth_name='koelectra3_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
