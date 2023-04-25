@@ -14,12 +14,34 @@ from sklearn.metrics import accuracy_score
 
 _my_linux_=1   #if not neuron, set it 0
 
-if _my_linux == 1 :
-    BATCH_SIZE = 512
+if _my_linux_ == 1 :
     os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-else :
-    BATCH_SIZE = 1024
 
+# default batch size
+BATCH_SIZE = 64
+
+#model_name='monologg/koelectra-base-v3-discriminator'
+#model_name='beomi/KcELECTRA-base'
+#model_name='skt/kobert-base-v1'
+#model_name='beomi/kcbert-base'
+#model_name='beomi/kobert'
+model_name='krevas/finance-koelectra-base-discriminator'    
+
+if model_name == 'monologg/koelectra-base-v3-discriminator':
+    pth_name='koelectra3_nsmc.pth'
+
+    if _my_linux_ == 1:
+        BATCH_SIZE = 512
+    else :
+        BATCH_SIZE = 2048
+
+elif model_name=='krevas/finance-koelectra-base-discriminator':
+    pth_name='finkoelectra_nsmc.pth'
+
+    if _my_linux_ == 1:
+        BATCH_SIZE = 512
+    else :
+        BATCH_SIZE = 2048
 
 class NSMCDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -45,14 +67,6 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
     labels = torch.tensor(labels)
     
     return input_ids, attention_masks, labels
-
-
-model_name='beomi/KcELECTRA-base'
-#model_name='skt/kobert-base-v1'
-#model_name='beomi/kcbert-base'
-#model_name='beomi/kobert'
-
-pth_name='kcelectra_nsmc.pth'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
