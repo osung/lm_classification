@@ -1,49 +1,52 @@
 import os
 import torch
-import argparse
 import pandas as pd
+import numpy as np
 from tqdm import tqdm
-from Korpora import Korpora
-from torch.utils.data import DataLoader 
+from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import AdamW
-from transformers import AutoTokenizer, AutoModel, AutoConfig
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoConfig
 from transformers import ElectraTokenizer, ElectraForSequenceClassification, ElectraConfig
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from Korpora import Korpora
 
 _my_linux_=0   #if not neuron, set it 0
 
 if _my_linux_ == 1 :
     os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+else :
+    train_path='/home01/hpc56a01/scratch/data/aihub/patent/train.tsv'
+    test_path='/home01/hpc56a01/scratch/data/aihub/patent/test.tsv'
 
 # default batch size
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 
-#model_name='monologg/koelectra-base-v3-discriminator'
+model_name='monologg/koelectra-base-v3-discriminator'
 #model_name='beomi/KcELECTRA-base'
 #model_name='skt/kobert-base-v1'
 #model_name='beomi/kcbert-base'
 #model_name='beomi/kobert'
-model_name='krevas/finance-koelectra-base-discriminator'    
+#model_name='krevas/finance-koelectra-base-discriminator'    
 
 if model_name == 'monologg/koelectra-base-v3-discriminator':
-    pth_name='koelectra3_nsmc.pth'
+    pth_name='koelectra3_patent.pth'
 
     if _my_linux_ == 1:
         BATCH_SIZE = 512
     else :
-        BATCH_SIZE = 512
+        BATCH_SIZE = 128
 
 elif model_name=='krevas/finance-koelectra-base-discriminator':
-    pth_name='finkoelectra_nsmc.pth'
+    pth_name='finkoelectra_patent.pth'
 
     if _my_linux_ == 1:
         BATCH_SIZE = 512
     else :
-        BATCH_SIZE = 512
+        BATCH_SIZE = 128
 
-class NSMCDataset(torch.utils.data.Dataset):
+class TrainDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
         self.input_ids = input_ids
         self.attention_masks = attention_masks
@@ -79,11 +82,30 @@ tokenizer = AutoTokenizer.from_pretrained(
     model_name, do_lower_case=False,
 )
 
-pretrained_model_config = ElectraConfig.from_pretrained(model_name)
-model = ElectraForSequenceClassification.from_pretrained(
+pretrained_model_config = AutoConfig.from_pretrained(model_name)
+pretrained_model_config.num_labels = 62091 #570
+
+model = AutoModelForSequenceClassification.from_pretrained(
     model_name,
     config=pretrained_model_config,
 )
+
+print("Preparing train data")
+
+train_df = pd.read_csv(train_path, sep='\t')
+print(train_df)
+
+#rand_series = pd.Series(np.random.randint(0, 500, size=len(train_df)))
+#train_df['KSIC'] = rand_series
+
+print("Tokenizing train data")
+
+train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['KSIC'])
+
+print("Generating torch tensor from the tokenized train data")
+
+train_dataset = TrainDataset(train_input_ids, train_attention_masks, train_labels)
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
 
 # parallelization
 if torch.cuda.device_count() > 1:
@@ -93,33 +115,7 @@ if torch.cuda.device_count() > 1:
 
 model = model.to(device)
 
-nsmc = Korpora.load("nsmc")
-
-print("Preparing train and val data")
-
-train_df = pd.DataFrame({"text": nsmc.train.texts, 'label': nsmc.train.labels})
-#train_inputs, val_inputs, train_labels, val_labels = train_test_split(train_df['text'], train_df['label'], random_state=59, test_size=0.1)
-
-print(train_df)
-
-print("Tokenizing train and val data")
-
-train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['label'])
-
-#train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_inputs.tolist(), train_labels)
-#val_input_ids, val_attention_masks, val_labels = get_encode_data(tokenizer, val_inputs.tolist(), val_labels)
-
-print("Generating torch tensor from the tokenized train and val data")
-
-train_dataset = NSMCDataset(train_input_ids, train_attention_masks, train_labels)
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE)
-
-#val_dataset = NSMCDataset(val_input_ids, val_attention_masks, val_labels)
-#val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=32)
-
-
 # fine tuning
-
 optimizer = AdamW(model.parameters(), lr=5e-5)
 num_epochs = 5
 num_training_steps = num_epochs * len(train_dataloader)
@@ -155,22 +151,23 @@ for epoch in range(num_epochs):
             print(f'Epoch {epoch+1} / Step {step+1} - Loss: {epoch_loss/epoch_steps:.5f}')
 
 
-torch.save(model.state_dict(), pth_name) #'bert_nsmc.pth')
-
+torch.save(model.state_dict(), pth_name)
+#model.save_pretrained("patent_koelastic")
 
 # evaluation
 
 print("Preparing test data")
 
-test_df = pd.DataFrame({"text": nsmc.test.texts, 'label': nsmc.test.labels})
+test_df = pd.read_csv(test_path, sep='\t')
+print(test_df)
 
-print("Tokenizing test data")
+print("Tokenizing train and val data")
 
-input_ids, attention_masks, labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['label'])
+test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['KSIC'])
 
-print("Generating torch tensor from the tokenized data")
+print("Generating torch tensor from the tokenized test data")
 
-test_dataset = NSMCDataset(input_ids, attention_masks, labels)
+test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
 test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 print("Evaluating model using test data")

@@ -35,4 +35,3 @@ for index, row in ksic_df.iterrows():
 
 train_df.to_csv('train.tsv', sep='\t', index=False)
 
-
