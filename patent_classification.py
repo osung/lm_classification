@@ -34,17 +34,17 @@ if model_name == 'monologg/koelectra-base-v3-discriminator':
     pth_name='koelectra3_patent.pth'
 
     if _my_linux_ == 1:
-        BATCH_SIZE = 512
-    else :
         BATCH_SIZE = 128
+    else :
+        BATCH_SIZE = 1024
 
 elif model_name=='krevas/finance-koelectra-base-discriminator':
     pth_name='finkoelectra_patent.pth'
 
     if _my_linux_ == 1:
-        BATCH_SIZE = 512
-    else :
         BATCH_SIZE = 128
+    else :
+        BATCH_SIZE = 512
 
 class TrainDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -83,7 +83,7 @@ tokenizer = AutoTokenizer.from_pretrained(
 )
 
 pretrained_model_config = AutoConfig.from_pretrained(model_name)
-pretrained_model_config.num_labels = 62091 #570
+pretrained_model_config.num_labels = 564 #570
 
 model = AutoModelForSequenceClassification.from_pretrained(
     model_name,
@@ -95,12 +95,9 @@ print("Preparing train data")
 train_df = pd.read_csv(train_path, sep='\t')
 print(train_df)
 
-#rand_series = pd.Series(np.random.randint(0, 500, size=len(train_df)))
-#train_df['KSIC'] = rand_series
-
 print("Tokenizing train data")
 
-train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['KSIC'])
+train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'])
 
 print("Generating torch tensor from the tokenized train data")
 
@@ -117,7 +114,7 @@ model = model.to(device)
 
 # fine tuning
 optimizer = AdamW(model.parameters(), lr=5e-5)
-num_epochs = 5
+num_epochs = 10
 num_training_steps = num_epochs * len(train_dataloader)
 lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
 
@@ -163,7 +160,7 @@ print(test_df)
 
 print("Tokenizing train and val data")
 
-test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['KSIC'])
+test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=256)
 
 print("Generating torch tensor from the tokenized test data")
 
