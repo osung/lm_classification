@@ -17,8 +17,8 @@ _my_linux_=0   #if not neuron, set it 0
 if _my_linux_ == 1 :
     os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 else :
-    train_path='/home01/hpc56a01/scratch/data/aihub/patent/train.tsv'
-    test_path='/home01/hpc56a01/scratch/data/aihub/patent/test.tsv'
+    train_path='/home01/hpc56a01/scratch/data/aihub/patent/train_mid.tsv'
+    test_path='/home01/hpc56a01/scratch/data/aihub/patent/test_mid.tsv'
 
 # default batch size
 BATCH_SIZE = 128
@@ -31,7 +31,7 @@ model_name='monologg/koelectra-base-v3-discriminator'
 #model_name='krevas/finance-koelectra-base-discriminator'    
 
 if model_name == 'monologg/koelectra-base-v3-discriminator':
-    pth_name='koelectra3_patent.pth'
+    pth_name='koelectra3_patent_20.pth'
 
     if _my_linux_ == 1:
         BATCH_SIZE = 128
@@ -83,7 +83,7 @@ tokenizer = AutoTokenizer.from_pretrained(
 )
 
 pretrained_model_config = AutoConfig.from_pretrained(model_name)
-pretrained_model_config.num_labels = 564 #570
+pretrained_model_config.num_labels = 118 #564 
 
 model = AutoModelForSequenceClassification.from_pretrained(
     model_name,
@@ -114,7 +114,7 @@ model = model.to(device)
 
 # fine tuning
 optimizer = AdamW(model.parameters(), lr=5e-5)
-num_epochs = 10
+num_epochs = 20
 num_training_steps = num_epochs * len(train_dataloader)
 lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
 
