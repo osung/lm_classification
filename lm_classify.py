@@ -85,7 +85,7 @@ else :
 
 model_name = args.model.replace('/', '_')
 
-pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
+pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
 
 # set model
 print("Setting model")
@@ -101,13 +101,11 @@ model = AutoModelForSequenceClassification.from_pretrained(
     config=pretrained_model_config,
 )
 
-#print(tokenizer)
-#print(pretrained_model_config)
-#print(model)
-
 print("Preparing train data")
 
 train_df = pd.read_csv(train_path, sep='\t')
+train_df = train_df.dropna()
+train_df = train_df.reset_index(drop=True)
 print(train_df)
 
 print("Tokenizing train data")
@@ -168,20 +166,21 @@ torch.save(model.state_dict(), pth_name)
 #model.save_pretrained("patent_koelastic")
 
 # evaluation
-
 print("Preparing test data")
 
 test_df = pd.read_csv(test_path, sep='\t')
+test_df = test_df.dropna()
+test_df = test_df.reset_index(drop=True)
 print(test_df)
 
-print("Tokenizing train and val data")
+print("Tokenizing test data")
 
 test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=256)
 
 print("Generating torch tensor from the tokenized test data")
 
 test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
-test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.bath)
+test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch)
 
 print("Evaluating model using test data")
 
