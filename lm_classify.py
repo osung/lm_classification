@@ -1,5 +1,7 @@
 import os
 import torch
+import argparse
+import datetime
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -12,39 +14,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from Korpora import Korpora
 
-_my_linux_=0   #if not neuron, set it 0
-
-if _my_linux_ == 1 :
-    os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-else :
-    train_path='/home01/hpc56a01/scratch/data/aihub/patent/train_small.tsv'
-    test_path='/home01/hpc56a01/scratch/data/aihub/patent/test_small.tsv'
-
-# default batch size
-BATCH_SIZE = 256
-
-model_name='monologg/koelectra-base-v3-discriminator'
-#model_name='beomi/KcELECTRA-base'
-#model_name='skt/kobert-base-v1'
-#model_name='beomi/kcbert-base'
-#model_name='beomi/kobert'
-#model_name='krevas/finance-koelectra-base-discriminator'    
-
-if model_name == 'monologg/koelectra-base-v3-discriminator':
-    pth_name='koelectra3_patent_20.pth'
-
-    if _my_linux_ == 1:
-        BATCH_SIZE = 128
-    else :
-        BATCH_SIZE = 1024
-
-elif model_name=='krevas/finance-koelectra-base-discriminator':
-    pth_name='finkoelectra_patent.pth'
-
-    if _my_linux_ == 1:
-        BATCH_SIZE = 128
-    else :
-        BATCH_SIZE = 512
 
 class TrainDataset(torch.utils.data.Dataset):
     def __init__(self, input_ids, attention_masks, labels):
@@ -71,6 +40,25 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
     
     return input_ids, attention_masks, labels
 
+
+def get_args() :
+    parser = argparse.ArgumentParser(description="Train classifiers using LLM.")
+
+    parser.add_argument('-tr', '--train', type=str, required=True, help='Set train data (mandatory)')
+    parser.add_argument('-te', '--test', type=str, help='Set test data')
+    parser.add_argument('-d', '--dir', type=str, help='Set a base directory for the train and test data')
+
+    parser.add_argument('-m', '--model', type=str, help='Set the base model for training')
+    parser.add_argument('-e', '--epoch', type=int, default=5, help='Set number of epochs for the training')
+    parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
+    parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
+    parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
+
+    args = parser.parse_args()
+
+    return args
+
+
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print('available device: ', device)
@@ -78,17 +66,44 @@ else:
     device = torch.device("cpu")
     print('available device: ', device)
 
+
+# process commandline arguments
+print("Processing commandline arguments");
+args = get_args()
+
+if args.dir is None :
+    base_dir = '.'
+else :
+    base_dir = args.dir
+
+train_path = base_dir + '/' + args.train
+
+if args.test is None :
+    test_path = None
+else :
+    test_path = base_dir + '/' + args.test
+
+model_name = args.model.replace('/', '_')
+
+pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
+
+# set model
+print("Setting model")
+
 tokenizer = AutoTokenizer.from_pretrained(
-    model_name, do_lower_case=False,
+    args.model, do_lower_case=False,
 )
 
-pretrained_model_config = AutoConfig.from_pretrained(model_name)
-pretrained_model_config.num_labels = 118 #564 
-
+pretrained_model_config = AutoConfig.from_pretrained(args.model)
+pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
 model = AutoModelForSequenceClassification.from_pretrained(
-    model_name,
+    args.model,
     config=pretrained_model_config,
 )
+
+#print(tokenizer)
+#print(pretrained_model_config)
+#print(model)
 
 print("Preparing train data")
 
@@ -102,7 +117,8 @@ train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer
 print("Generating torch tensor from the tokenized train data")
 
 train_dataset = TrainDataset(train_input_ids, train_attention_masks, train_labels)
-train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch, shuffle=True)
+
 
 # parallelization
 if torch.cuda.device_count() > 1:
@@ -114,7 +130,7 @@ model = model.to(device)
 
 # fine tuning
 optimizer = AdamW(model.parameters(), lr=5e-5)
-num_epochs = 20
+num_epochs = args.epoch
 num_training_steps = num_epochs * len(train_dataloader)
 lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
 
@@ -165,7 +181,7 @@ test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, t
 print("Generating torch tensor from the tokenized test data")
 
 test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
-test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=BATCH_SIZE)
+test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.bath)
 
 print("Evaluating model using test data")
 
