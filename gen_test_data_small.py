@@ -37,7 +37,8 @@ for index, row in ksic_df.iterrows():
     for label_data in label_json_data['dataset'] :
         f_list = list(filter(lambda x: x['documentId'] == label_data['documentId'], raw_json_data['dataset']))
         if 'claims' in f_list[0].keys() :
-            clean_text = re.sub('\([\u4e00-\u9fff0-9a-zA-Z]+\)', '', f_list[0]['claims'])
+            #clean_text = re.sub('\([\u4e00-\u9fff0-9a-zA-Z]+\)', '', f_list[0]['claims'])
+            clean_text = re.sub('[^ㄱ-ㅎㅏ-ㅣ가-힣\s]+', '', f_list[0]['claims'])
             new_row = pd.DataFrame({'text': clean_text, #f_list[0]['claims'], 
                                     'KSIC': row['code'], 
                                     #'code': index,
@@ -45,7 +46,7 @@ for index, row in ksic_df.iterrows():
                                     'code': small_codes[scode]}, index=[0])
             train_df = pd.concat([train_df, new_row], ignore_index=True)
 
-train_df.to_csv('test_small.tsv', sep='\t', index=False)
+train_df.to_csv('test_small2.tsv', sep='\t', index=False)
 
 print(small_codes)
 

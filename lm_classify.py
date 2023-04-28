@@ -47,12 +47,12 @@ def get_args() :
     parser.add_argument('-tr', '--train', type=str, required=True, help='Set train data (mandatory)')
     parser.add_argument('-te', '--test', type=str, help='Set test data')
     parser.add_argument('-d', '--dir', type=str, help='Set a base directory for the train and test data')
-
     parser.add_argument('-m', '--model', type=str, help='Set the base model for training')
     parser.add_argument('-e', '--epoch', type=int, default=5, help='Set number of epochs for the training')
     parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
+    parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
 
     args = parser.parse_args()
 
@@ -85,7 +85,7 @@ else :
 
 model_name = args.model.replace('/', '_')
 
-pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
+pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
 
 # set model
 print("Setting model")
@@ -110,7 +110,7 @@ print(train_df)
 
 print("Tokenizing train data")
 
-train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'])
+train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'], max_length=args.max_length)
 
 print("Generating torch tensor from the tokenized train data")
 
@@ -175,7 +175,7 @@ print(test_df)
 
 print("Tokenizing test data")
 
-test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=256)
+test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=args.max_length)
 
 print("Generating torch tensor from the tokenized test data")
 
@@ -190,7 +190,6 @@ y_true = []
 y_pred = []
 
 for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
-#for batch in test_dataloader:
     b_input_ids = batch[0].to(device)
     b_input_mask = batch[1].to(device)
     b_labels = batch[2].to(device)
