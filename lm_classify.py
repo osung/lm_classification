@@ -53,7 +53,8 @@ def get_args() :
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
-    parser.add_argument('--add_pad_token', action='store_true')
+    parser.add_argument('-r', '--resume', type=str, help='Set pth file to resume')
+    parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
 
     args = parser.parse_args()
 
@@ -88,8 +89,6 @@ else :
 
 model_name = args.model.replace('/', '_')
 
-pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
-
 # set model
 print("Setting model")
 
@@ -111,6 +110,38 @@ model = AutoModelForSequenceClassification.from_pretrained(
 if args.add_pad_token :
     model.config.pad_token_id = model.config.eos_token_id
 
+
+# parallelization
+if torch.cuda.device_count() > 1:
+    print(f'Using {torch.cuda.device_count()} GPUs.')
+
+    model = torch.nn.DataParallel(model)  
+
+model = model.to(device)
+
+# process resume file if any
+resume_no = 0
+
+if args.resume is None :
+    pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
+else :
+    resume_name = os.path.basename(args.resume)
+    pth_name = os.path.splitext(resume_name)[0] + '.pth'
+
+    print("resume_name is", resume_name)
+    print("pth_name is", pth_name)
+    
+    last_underscore_index = resume_name.rfind("_")
+    if last_underscore_index != -1:
+        resume_no = int(resume_name[last_underscore_index +1:]) + 1
+
+    print("resume no is", resume_no)
+
+    # load pretrained model
+    loaded_state_dict = torch.load(resume_name)
+    model.load_state_dict(loaded_state_dict)
+
+
 print("Preparing train data")
 
 train_df = pd.read_csv(train_path, sep='\t')
@@ -127,15 +158,6 @@ print("Generating torch tensor from the tokenized train data")
 train_dataset = TrainDataset(train_input_ids, train_attention_masks, train_labels)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch, shuffle=True)
 
-
-# parallelization
-if torch.cuda.device_count() > 1:
-    print(f'Using {torch.cuda.device_count()} GPUs.')
-
-    model = torch.nn.DataParallel(model)  
-
-model = model.to(device)
-
 # fine tuning
 optimizer = AdamW(model.parameters(), lr=5e-5)
 num_epochs = args.epoch
@@ -144,7 +166,10 @@ lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, nu
 
 model.train()
 
-for epoch in range(num_epochs):
+print("range is", resume_no, ", ", num_epochs)
+print(range(resume_no, num_epochs))
+
+for epoch in range(resume_no, num_epochs):
     epoch_loss = 0
     epoch_steps = 0
 
@@ -171,7 +196,9 @@ for epoch in range(num_epochs):
         if step % 1000 == 0:
             print(f'Epoch {epoch+1} / Step {step+1} - Loss: {epoch_loss/epoch_steps:.5f}')
 
-    torch.save(model.state_dict(), pth_name+str(epoch)) # save pth at every epoch
+    formatted_epoch = '_%02d' % epoch
+    print('saved pth file :', pth_name+formatted_epoch)
+    torch.save(model.state_dict(), pth_name+formatted_epoch) # save pth at every epoch
 
 torch.save(model.state_dict(), pth_name)
 
