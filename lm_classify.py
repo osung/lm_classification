@@ -53,6 +53,7 @@ def get_args() :
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
+    parser.add_argument('--add_pad_token', action='store_true')
 
     args = parser.parse_args()
 
@@ -70,6 +71,8 @@ else:
 # process commandline arguments
 print("Processing commandline arguments");
 args = get_args()
+
+print(args)
 
 if args.dir is None :
     base_dir = '.'
@@ -94,12 +97,19 @@ tokenizer = AutoTokenizer.from_pretrained(
     args.model, do_lower_case=False,
 )
 
+if args.add_pad_token :
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'left'
+
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
 pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
 model = AutoModelForSequenceClassification.from_pretrained(
     args.model,
     config=pretrained_model_config,
 )
+
+if args.add_pad_token :
+    model.config.pad_token_id = model.config.eos_token_id
 
 print("Preparing train data")
 
@@ -161,8 +171,10 @@ for epoch in range(num_epochs):
         if step % 1000 == 0:
             print(f'Epoch {epoch+1} / Step {step+1} - Loss: {epoch_loss/epoch_steps:.5f}')
 
+    torch.save(model.state_dict(), pth_name+str(epoch)) # save pth at every epoch
 
 torch.save(model.state_dict(), pth_name)
+
 #model.save_pretrained("patent_koelastic")
 
 # evaluation
