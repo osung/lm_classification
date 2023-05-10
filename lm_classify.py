@@ -89,6 +89,9 @@ else :
 
 model_name = args.model.replace('/', '_')
 
+if args.crt is not None :
+    os.environ['CURL_CA_BUNDLE'] = args.crt
+
 # set model
 print("Setting model")
 
@@ -140,7 +143,6 @@ else :
     # load pretrained model
     loaded_state_dict = torch.load(resume_name)
     model.load_state_dict(loaded_state_dict)
-
 
 print("Preparing train data")
 
