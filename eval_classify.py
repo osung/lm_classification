@@ -8,7 +8,6 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import AdamW
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoConfig
-from transformers import ElectraTokenizer, ElectraForSequenceClassification, ElectraConfig
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -130,6 +129,7 @@ test_df = test_df.reset_index(drop=True)
 
 # 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
 if args.truncate > 1 :
+    print("truncate sentences less than minimum length", args.truncate)
     test_df = test_df[test_df['text'].str.len() >= args.truncate]
     test_df = test_df.reset_index(drop=True)
 
