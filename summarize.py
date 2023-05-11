@@ -28,33 +28,34 @@ def summarize(input_text, tokenizer, model) :
     
     response = tokenizer.decode(summary_text_ids[0], skip_special_tokens=True)
     
-#print(len(input_text), len(response))
+    print(len(input_text), len(response))
     
     return response
 
-os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+#os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 model_name = 'eenzeenee/t5-base-korean-summarization'
 
+'''
 if torch.cuda.is_available():
     device = torch.device("cuda")
     print('available device: ', device)
 else:
     device = torch.device("cpu")
-    print('available device: ', device)
+    print('available device: ', device)  '''
 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# parallelization
 '''
+# parallelization
 if torch.cuda.device_count() > 1:
     print(f'Using {torch.cuda.device_count()} GPUs.')
 
-    model = torch.nn.DataParallel(model) '''
+    model = torch.nn.DataParallel(model)  '''
 
 model = model.to(device)
 
-train_df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
+train_df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
 train_df = train_df.dropna()
 train_df = train_df.reset_index(drop=True)
 
