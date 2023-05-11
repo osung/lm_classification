@@ -53,6 +53,7 @@ def get_args() :
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
+    parser.add_argument('-t', '--truncate', type=int, default=10, help='Truncate sentences less than minimum length')
     parser.add_argument('-r', '--resume', type=str, help='Set pth file to resume')
     parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
 
@@ -149,6 +150,12 @@ print("Preparing train data")
 train_df = pd.read_csv(train_path, sep='\t')
 train_df = train_df.dropna()
 train_df = train_df.reset_index(drop=True)
+
+# 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
+if args.truncate > 1 :
+    train_df = train_df[train_df['text'].str.len() >= args.truncate]    
+    train_df = train_df.reset_index(drop=True)
+
 print(train_df)
 
 print("Tokenizing train data")
@@ -212,6 +219,12 @@ print("Preparing test data")
 test_df = pd.read_csv(test_path, sep='\t')
 test_df = test_df.dropna()
 test_df = test_df.reset_index(drop=True)
+
+# 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
+if args.truncate > 1 :
+    test_df = test_df[test_df['text'].str.len() >= args.truncate]
+    test_df = test_df.reset_index(drop=True)
+
 print(test_df)
 
 print("Tokenizing test data")

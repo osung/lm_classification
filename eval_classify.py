@@ -54,6 +54,8 @@ def get_args() :
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
+    parser.add_argument('-t', '--truncate', type=int, default=10, help='Truncate sentences less than minimum length')
+    parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
 
     args = parser.parse_args()
 
@@ -82,6 +84,8 @@ else :
 
 model_name = args.model.replace('/', '_')
 
+if args.crt is not None :
+    os.environ['CURL_CA_BUNDLE'] = args.crt
 
 # set model
 print("Setting model")
@@ -90,12 +94,19 @@ tokenizer = AutoTokenizer.from_pretrained(
     args.model, do_lower_case=False,
 )
 
+if args.add_pad_token :
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = 'left'
+
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
 pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
 model = AutoModelForSequenceClassification.from_pretrained(
     args.model,
     config=pretrained_model_config,
 )
+
+if args.add_pad_token :
+    model.config.pad_token_id = model.config.eos_token_id
 
 # parallelization
 if torch.cuda.device_count() > 1:
@@ -116,6 +127,12 @@ print("Preparing test data")
 test_df = pd.read_csv(test_path, sep='\t')
 test_df = test_df.dropna()
 test_df = test_df.reset_index(drop=True)
+
+# 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
+if args.truncate > 1 :
+    test_df = test_df[test_df['text'].str.len() >= args.truncate]
+    test_df = test_df.reset_index(drop=True)
+
 print(test_df)
 
 print("Tokenizing test data")
