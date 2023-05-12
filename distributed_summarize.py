@@ -88,7 +88,7 @@ model = DistributedDataParallel(model)
 # 데이터 로딩
 print("Loading tsv data")
 df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
-df.dropna()
+df = df.dropna()
 df = df.reset_index(drop=True)
 print("Done")
 
@@ -129,7 +129,11 @@ for idx, row in df[start_idx:].iterrows() :
     text = row['text']
 
     # 입력 텍스트를 토크나이징
-    input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
+    try :
+        input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
+    except TypeError:
+        print("ERROR RANK [", rank, "] INDEX ", index, "TEXT", text)
+        sys.exit()
 
     if len(input_ids[0]) > MAX_TOKEN :
         # generate() 함수를 사용하여 텍스트 생성
