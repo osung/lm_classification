@@ -1,3 +1,4 @@
+import sys
 import torch
 import torch.distributed as dist
 import pandas as pd
@@ -41,6 +42,9 @@ def summarize(input_text, tokenizer, model) :
     #print(len(input_text), len(response))
 
     return response
+
+cont_idx = [10000, 8000, 8000, 9000]
+cont_file = ['summary_data_0_9999.pkl', 'summary_data_1_7999.pkl', 'summary_data_2_7999.pkl', 'summary_data_3_8999.pkl']
 
 #os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 model_name = 'eenzeenee/t5-base-korean-summarization'
@@ -110,8 +114,17 @@ out_name = 'summary_data_' + str(rank)
 
 # 각 프로세스에서 동일한 작업 수행
 outputs = []
+start_idx = 0
+
+if len(cont_file) >= world_size :
+    with open(cont_file[rank], 'rb') as file:
+        outputs = pickle.load(file)
+
+    start_idx = cont_idx[rank]
+    print("[", rank, "] load texts:", len(outputs), "start idx:", start_idx)
+
 #for text in df['text']:
-for idx, row in df.iterrows() :
+for idx, row in df[start_idx:].iterrows() :
     index = idx - rank * data_per_gpu
     text = row['text']
 
