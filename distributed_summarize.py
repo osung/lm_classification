@@ -3,8 +3,10 @@ import torch.distributed as dist
 import pandas as pd
 from torch.nn.parallel import DistributedDataParallel
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import pickle
 
 MAX_TOKEN = 256
+THRESHOLD = 256
 
 def get_encode_length(tokenizer, sentence) :
     encoded = tokenizer(sentence, padding=True, truncation=False)
@@ -44,57 +46,115 @@ def summarize(input_text, tokenizer, model) :
 model_name = 'eenzeenee/t5-base-korean-summarization'
 
 # 분산 학습을 위해 초기화
-torch.distributed.init_process_group(backend='nccl')
+dist.init_process_group(backend='nccl')
+
+world_size = dist.get_world_size()
+rank = dist.get_rank()
+print("Rank:", rank, "out of", world_size)
+
+num_gpus = torch.cuda.device_count()
+print("Number of GPUs:", num_gpus)
+
+# 각 프로세스에 할당될 CUDA 장치 인덱스 계산
+device_indices = list(range(rank, num_gpus, world_size))
+
+# 각 프로세스에 CUDA 장치 할당
+device = torch.device(f"cuda:{device_indices[0]}")
+torch.cuda.set_device(device)
+
+'''
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print('available device: ', device)
+else:
+    device = torch.device("cpu")
+    print('available device: ', device) '''
+
 
 # 모델 및 토크나이저 초기화
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+model = model.to(device)
+
+print("loading model", model_name, "is done")
 
 # DistributedDataParallel로 모델 감싸기
 model = DistributedDataParallel(model)
 
-# 모델을 GPU로 이동
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model.to(device)
-
 # 데이터 로딩
+print("Loading tsv data")
 df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
+df.dropna()
+df = df.reset_index(drop=True)
+print("Done")
 
-df = df[:100]
+#df = df[:1000]
 
 # 데이터 분할
-data_per_gpu = len(df) // torch.distributed.get_world_size()
-df = df[data_per_gpu * torch.distributed.get_rank(): data_per_gpu * (torch.distributed.get_rank() + 1)]
+data_per_gpu = len(df) // world_size
+
+df = df[data_per_gpu * rank: data_per_gpu * (rank + 1)]
+
+print("[", rank, "] data_per_gpu:", data_per_gpu, ", len(df):", len(df))
+
+dist.barrier()
+
+#print(df)
 
 # 분할된 데이터를 각 프로세스로 전달
-dist.broadcast(df, src=0)
+#dist.broadcast(df, src=0)
+
+# set output file name without extension
+out_name = 'summary_data_' + str(rank) 
+#print("Length of df in rank", rank, "is", len(df))
 
 # 각 프로세스에서 동일한 작업 수행
 outputs = []
-for text in df['text']:
+#for text in df['text']:
+for idx, row in df.iterrows() :
+    index = idx - rank * data_per_gpu
+    text = row['text']
+
     # 입력 텍스트를 토크나이징
-    #input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
+    input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
 
-    # generate() 함수를 사용하여 텍스트 생성
-    with torch.no_grad():
-        output = summarize(text, tokenizer, model)
-        #model.generate(input_ids, max_length=100)
+    if len(input_ids[0]) > MAX_TOKEN :
+        # generate() 함수를 사용하여 텍스트 생성
+        with torch.no_grad():
+            summary = summarize(text, tokenizer, model.module)
+            #print("[", rank, "] index: ", index, "(", len(text), len(summary), ")")
+            if len(summary) > len(text) :
+                summary = text
+    else :
+        summary = text
 
-        # 생성된 텍스트를 디코딩
-        #generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+    # 결과 저장
+    outputs.append(summary)
 
-        # 결과 저장
-        outputs.append(output)
+    if index % 10 == 0 :
+        print(rank, ":", index, "out of", len(df))
+
+    if index % 1000 == 999 :
+        file_name = out_name + '_' + str(index) + '.pkl'   
+
+        with open(file_name, "wb") as file:
+            pickle.dump(outputs, file)
+
+print("[", rank, "]", "Summarization is done")
+
+df['summary'] = outputs
+csv_name = out_name + '.tsv'
+df.to_csv(csv_name, index=False, sep='\t')
 
 # 결과 수집
-all_outputs = torch.distributed.gather(torch.tensor(outputs), dst=0)
+#all_outputs = dist.gather(torch.tensor(outputs), dst=0)
 
 # 결과를 프로세스 0에서 출력
-if torch.distributed.get_rank() == 0:
+#if dist.get_rank() == 0:
 
-    df['summary'] = all_outputs
+#    df['summary'] = all_outputs
 
-    df.to_csv("summary_data.tsv", index=False, sep='\t')
+#    df.to_csv("summary_data.tsv", index=False, sep='\t')
     
     #for output in all_outputs:
         #print(output)
