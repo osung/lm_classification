@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.distributed as dist
 import pandas as pd
@@ -42,8 +43,9 @@ def summarize(input_text, tokenizer, model) :
 
     return response
 
-#os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name = 'eenzeenee/t5-base-korean-summarization'
+os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+#model_name = 'eenzeenee/t5-base-korean-summarization'
+model_name = 'psyche/KoT5-summarization'
 
 # 분산 학습을 위해 초기화
 dist.init_process_group(backend='nccl')
@@ -83,7 +85,8 @@ model = DistributedDataParallel(model)
 
 # 데이터 로딩
 print("Loading tsv data")
-df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
+#df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
+df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
 df.dropna()
 df = df.reset_index(drop=True)
 print("Done")
