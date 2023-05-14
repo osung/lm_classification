@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import torch.distributed as dist
 import pandas as pd
@@ -43,9 +44,13 @@ def summarize(input_text, tokenizer, model) :
 
     return response
 
+cont_idx = [0, 0, 0, 0] #10000, 8000, 8000, 9000]
+cont_file = [] #'summary_data_0_9999.pkl', 'summary_data_1_7999.pkl', 'summary_data_2_7999.pkl', 'summary_data_3_8999.pkl']
+
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 #model_name = 'eenzeenee/t5-base-korean-summarization'
 model_name = 'psyche/KoT5-summarization'
+
 
 # 분산 학습을 위해 초기화
 dist.init_process_group(backend='nccl')
@@ -87,7 +92,7 @@ model = DistributedDataParallel(model)
 print("Loading tsv data")
 #df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
 df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
-df.dropna()
+df = df.dropna()
 df = df.reset_index(drop=True)
 print("Done")
 
@@ -113,13 +118,26 @@ out_name = 'summary_data_' + str(rank)
 
 # 각 프로세스에서 동일한 작업 수행
 outputs = []
+start_idx = 0
+
+if len(cont_file) >= world_size :
+    with open(cont_file[rank], 'rb') as file:
+        outputs = pickle.load(file)
+
+    start_idx = cont_idx[rank]
+    print("[", rank, "] load texts:", len(outputs), "start idx:", start_idx)
+
 #for text in df['text']:
-for idx, row in df.iterrows() :
+for idx, row in df[start_idx:].iterrows() :
     index = idx - rank * data_per_gpu
     text = row['text']
 
     # 입력 텍스트를 토크나이징
-    input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
+    try :
+        input_ids = tokenizer.encode(text, return_tensors='pt').to(device)
+    except TypeError:
+        print("ERROR RANK [", rank, "] INDEX ", index, "TEXT", text)
+        sys.exit()
 
     if len(input_ids[0]) > MAX_TOKEN :
         # generate() 함수를 사용하여 텍스트 생성
