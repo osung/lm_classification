@@ -48,8 +48,8 @@ cont_idx = [0, 0, 0, 0] #10000, 8000, 8000, 9000]
 cont_file = [] #'summary_data_0_9999.pkl', 'summary_data_1_7999.pkl', 'summary_data_2_7999.pkl', 'summary_data_3_8999.pkl']
 
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-#model_name = 'eenzeenee/t5-base-korean-summarization'
-model_name = 'psyche/KoT5-summarization'
+model_name = 'eenzeenee/t5-base-korean-summarization'
+#model_name = 'psyche/KoT5-summarization'
 
 
 # 분산 학습을 위해 초기화
@@ -91,7 +91,8 @@ model = DistributedDataParallel(model)
 # 데이터 로딩
 print("Loading tsv data")
 #df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
-df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
+#df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
+df = pd.read_csv('/home/osung/data/korean/patent/test_mid2.tsv', sep='\t')
 df = df.dropna()
 df = df.reset_index(drop=True)
 print("Done")
@@ -113,7 +114,7 @@ dist.barrier()
 #dist.broadcast(df, src=0)
 
 # set output file name without extension
-out_name = 'summary_data_' + str(rank) 
+out_name = 'summary_test_' + str(rank) 
 #print("Length of df in rank", rank, "is", len(df))
 
 # 각 프로세스에서 동일한 작업 수행
