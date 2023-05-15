@@ -93,6 +93,16 @@ model_name = args.model.replace('/', '_')
 if args.crt is not None :
     os.environ['CURL_CA_BUNDLE'] = args.crt
 
+
+# load data
+print("Preparing train data")
+
+train_df = pd.read_csv(train_path, sep='\t')
+train_df = train_df.dropna()
+train_df = train_df.reset_index(drop=True)
+
+target = 'code'
+
 # set model
 print("Setting model")
 
@@ -105,7 +115,11 @@ if args.add_pad_token :
     tokenizer.padding_side = 'left'
 
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
-pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
+#pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
+
+pretrained_model_config.num_labels = train_df[target].nunique()
+print("num_labels :", pretrained_model_config.num_labels)
+
 model = AutoModelForSequenceClassification.from_pretrained(
     args.model,
     config=pretrained_model_config,
@@ -145,12 +159,6 @@ else :
     loaded_state_dict = torch.load(resume_name)
     model.load_state_dict(loaded_state_dict)
 
-print("Preparing train data")
-
-train_df = pd.read_csv(train_path, sep='\t')
-train_df = train_df.dropna()
-train_df = train_df.reset_index(drop=True)
-
 # 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
 if args.truncate > 1 :
     train_df = train_df[train_df['text'].str.len() >= args.truncate]    
@@ -160,7 +168,7 @@ print(train_df)
 
 print("Tokenizing train data")
 
-train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'], max_length=args.max_length)
+train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df[target], max_length=args.max_length)
 
 print("Generating torch tensor from the tokenized train data")
 
@@ -229,7 +237,7 @@ print(test_df)
 
 print("Tokenizing test data")
 
-test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=args.max_length)
+test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df[target], max_length=args.max_length)
 
 print("Generating torch tensor from the tokenized test data")
 
