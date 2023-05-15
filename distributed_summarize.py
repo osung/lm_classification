@@ -44,8 +44,10 @@ def summarize(input_text, tokenizer, model) :
 
     return response
 
-cont_idx = [0, 0, 0, 0] #10000, 8000, 8000, 9000]
-cont_file = [] #'summary_data_0_9999.pkl', 'summary_data_1_7999.pkl', 'summary_data_2_7999.pkl', 'summary_data_3_8999.pkl']
+#cont_idx = [0, 0, 0, 0] #10000, 8000, 8000, 9000]
+#cont_file = [] #'summary_data_0_9999.pkl', 'summary_data_1_7999.pkl', 'summary_data_2_7999.pkl', 'summary_data_3_8999.pkl']
+cont_idx = [112000, 112000, 112000, 104000] #10000, 8000, 8000, 9000]
+cont_file = ['summary_data_0_111999.pkl', 'summary_data_1_111999.pkl', 'summary_data_2_111999.pkl', 'summary_data_3_103999.pkl']
 
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 model_name = 'eenzeenee/t5-base-korean-summarization'
@@ -153,7 +155,7 @@ for idx, row in df[start_idx:].iterrows() :
     # 결과 저장
     outputs.append(summary)
 
-    if index % 10 == 0 :
+    if index % 100 == 0 :
         print(rank, ":", index, "out of", len(df))
 
     if index % 1000 == 999 :
