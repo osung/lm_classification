@@ -1,4 +1,5 @@
 import os
+import csv
 import torch
 import argparse
 import datetime
@@ -12,6 +13,7 @@ from transformers import ElectraTokenizer, ElectraForSequenceClassification, Ele
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from Korpora import Korpora
 
 
 class TrainDataset(torch.utils.data.Dataset):
@@ -47,6 +49,7 @@ def get_args() :
     parser.add_argument('-te', '--test', type=str, help='Set test data')
     parser.add_argument('-d', '--dir', type=str, help='Set a base directory for the train and test data')
     parser.add_argument('-m', '--model', type=str, help='Set the base model for training')
+    parser.add_argument('-v', '--variable', type=str, default='code', help='Set the target variable to learn')
     parser.add_argument('-e', '--epoch', type=int, default=5, help='Set number of epochs for the training')
     parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
@@ -100,7 +103,31 @@ train_df = pd.read_csv(train_path, sep='\t')
 train_df = train_df.dropna()
 train_df = train_df.reset_index(drop=True)
 
-target = 'code'
+#target = 'code'
+target = args.variable
+
+if not target in train_df.keys() :
+    print('No', target, 'in the loaded dataframe')
+    quit()
+
+if target != 'code' :
+    codes = {}    # dict to store pairs of KSIC and int code to learn
+    targets = []  # list
+
+    for idx, row in train_df.iterrows() :
+        if not row[target] in codes.keys() :
+            codes[row[target]] = len(codes)
+
+        targets.append(codes[row[target]])
+
+    train_df['code'] = targets
+
+    # write code to the csv file
+    filename = target + '_code.csv'
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        for key, value in codes.items():
+            writer.writerow([key, value])
 
 # set model
 print("Setting model")

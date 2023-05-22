@@ -13,7 +13,6 @@ from sklearn.metrics import accuracy_score
 
 _my_linux_ = 1
 
-
 if _my_linux_  == 1:
    BATCH_SIZE = 1024
    os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
