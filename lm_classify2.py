@@ -167,7 +167,7 @@ model = model.to(device)
 resume_no = 0
 
 if args.resume is None :
-    pth_name = model_name + '_' + args.train + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
+    pth_name = model_name + '_' + args.train + '_' + target + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
 else :
     resume_name = os.path.basename(args.resume)
     pth_name = os.path.splitext(resume_name)[0] + '.pth'
