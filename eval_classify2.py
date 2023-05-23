@@ -115,7 +115,12 @@ if args.add_pad_token :
     tokenizer.padding_side = 'left'
 
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
-pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
+
+if args.num_labels > 2 :
+    pretrained_model_config.num_labels = args.num_labels 
+elif len(codes) > 0 :
+    pretrained_model_config.num_labels = len(codes)
+    
 model = AutoModelForSequenceClassification.from_pretrained(
     args.model,
     config=pretrained_model_config,
