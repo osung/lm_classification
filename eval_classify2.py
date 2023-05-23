@@ -68,7 +68,7 @@ if torch.cuda.is_available():
     print('available device: ', device)
 else:
     device = torch.device("cpu")
-    print('available device: ', device)
+    print('available device: ', device) 
 
 # process commandline arguments
 print("Processing commandline arguments");
@@ -88,6 +88,20 @@ model_name = args.model.replace('/', '_')
 
 if args.crt is not None :
     os.environ['CURL_CA_BUNDLE'] = args.crt
+
+# read code file
+codes = {}
+
+if args.code_file is not None :
+    file_path = args.code_file
+
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            key, value = row
+            codes[int(key)] = int(value)
+
+    print(codes)
 
 # set model
 print("Setting model")
@@ -114,12 +128,13 @@ if args.add_pad_token :
 if torch.cuda.device_count() > 1:
     print(f'Using {torch.cuda.device_count()} GPUs.')
 
-    model = torch.nn.DataParallel(model)  
+    model = torch.nn.DataParallel(model)   
 
 model = model.to(device)
 
 # load pretrained model
 loaded_state_dict = torch.load(args.pth_name)
+#print(loaded_state_dict)
 
 model.load_state_dict(loaded_state_dict)
 
@@ -140,27 +155,16 @@ if args.truncate > 1 :
 target = args.variable
 print("target is", target)
 
-if target != 'code' :
-    if args.code_file is not None :
-        file_path = args.code_file
-        codes = {}
+if target != 'code' and len(codes) > 0 :
+    targets = []
+    for idx, row in test_df.iterrows() :
+#targets.append(codes[str(row[target])])
+        targets.append(codes[row[target]])
 
-        with open(file_path, 'r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                key, value = row
-                codes[int(key)] = int(value)
-
-        print(codes)
-
-        targets = []
-        for idx, row in test_df.iterrows() :
-            targets.append(codes[str(row[target])])
-
-        test_df['code'] = targets
-    else :
-        print('There is no code file')
-        quit()
+    test_df['code'] = targets
+else :
+    print('Invalid code file')
+    quit()
 
 print(test_df)
 

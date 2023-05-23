@@ -58,6 +58,7 @@ def get_args() :
     parser.add_argument('-t', '--truncate', type=int, default=10, help='Truncate sentences less than minimum length')
     parser.add_argument('-r', '--resume', type=str, help='Set pth file to resume')
     parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
+    parser.add_argument('--save_every_iter', action='store_true', help='Set if want to store pth files for every iteration')
 
     args = parser.parse_args()
 
@@ -141,7 +142,6 @@ if args.add_pad_token :
     tokenizer.padding_side = 'left'
 
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
-#pretrained_model_config.num_labels = args.num_labels #44 #(mid) #118 (small)  #564 
 
 pretrained_model_config.num_labels = train_df['code'].nunique()
 print("num_labels :", pretrained_model_config.num_labels)
@@ -239,9 +239,10 @@ for epoch in range(resume_no, num_epochs):
         if step % 1000 == 0:
             print(f'Epoch {epoch+1} / Step {step+1} - Loss: {epoch_loss/epoch_steps:.5f}')
 
-    formatted_epoch = '_%02d' % epoch
-    print('saved pth file :', pth_name+formatted_epoch)
-    torch.save(model.state_dict(), pth_name+formatted_epoch) # save pth at every epoch
+    if args.save_every_iter :
+        formatted_epoch = '_%02d' % epoch
+        print('saved pth file :', pth_name+formatted_epoch)
+        torch.save(model.state_dict(), pth_name+formatted_epoch) # save pth at every epoch
 
 torch.save(model.state_dict(), pth_name)
 
