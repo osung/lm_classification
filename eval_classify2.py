@@ -138,6 +138,7 @@ if args.truncate > 1 :
 
 # read code file
 target = args.variable
+print("target is", target)
 
 if target != 'code' :
     if args.code_file is not None :
@@ -148,7 +149,7 @@ if target != 'code' :
             reader = csv.reader(file)
             for row in reader:
                 key, value = row
-                codes[key] = value
+                codes[int(key)] = int(value)
 
         print(codes)
 
