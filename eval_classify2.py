@@ -44,12 +44,12 @@ def get_encode_data(tokenizer, sentences, labels, max_length=128):
 def get_args() :
     parser = argparse.ArgumentParser(description="Train classifiers using LLM.")
 
-    parser.add_argument('pth_name', type=str, required=True, help='Set pth file to read')
+    parser.add_argument('pth_name', type=str, help='Set pth file to read (mandatory)')
 
-    parser.add_argument('-te', '--test', type=str, required=True, help='Set test data')
+    parser.add_argument('-te', '--test', type=str, required=True, help='Set test data (mandatory)')
     parser.add_argument('-d', '--dir', type=str, help='Set a base directory for the train and test data')
 
-    parser.add_argument('-m', '--model', type=str, required=True, help='Set the base model for training')
+    parser.add_argument('-m', '--model', type=str, required=True, help='Set the base model for training (mandatory)')
     parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
     parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
@@ -138,6 +138,7 @@ if args.truncate > 1 :
 
 # read code file
 target = args.variable
+print("target is", target)
 
 if target != 'code' :
     if args.code_file is not None :
@@ -148,7 +149,7 @@ if target != 'code' :
             reader = csv.reader(file)
             for row in reader:
                 key, value = row
-                codes[key] = value
+                codes[int(key)] = int(value)
 
         print(codes)
 
