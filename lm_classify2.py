@@ -123,7 +123,7 @@ if target != 'code' :
     train_df['code'] = targets
 
     # write code to the csv file
-    filename = target + '_code.csv'
+    filename =  model_name + '_' + args.train + '_' + target +'_code.csv'
     with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
         for key, value in codes.items():
