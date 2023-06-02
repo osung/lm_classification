@@ -159,6 +159,8 @@ for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
     with torch.no_grad():
         outputs = model(b_input_ids, attention_mask=b_input_mask)
 
+#print(outputs)
+
     logits = outputs.logits
     _, predicted = torch.max(logits, dim=1)
 
