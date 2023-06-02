@@ -120,6 +120,8 @@ if args.num_labels > 2 :
     pretrained_model_config.num_labels = args.num_labels 
 elif len(codes) > 0 :
     pretrained_model_config.num_labels = len(codes)
+
+print("Number of labels:", pretrained_model_config.num_labels)
     
 model = AutoModelForSequenceClassification.from_pretrained(
     args.model,
@@ -180,7 +182,7 @@ test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, t
 print("Generating torch tensor from the tokenized test data")
 
 test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
-test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch)
+test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch, shuffle=True)
 
 print("Evaluating model using test data")
 
