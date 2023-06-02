@@ -1,8 +1,13 @@
 import pandas as pd
 
-path = '/home/osung/data/korean/patent/test_ms_manufact.tsv'
+#path = '/home/osung/data/korean/patent/test_ms_manufact.tsv'
+path = '/home/osung/data/korean/patent/train_summary_psyche-kot5_manufact.tsv'
 
 df = pd.read_csv(path, sep='\t')
+
+df = df.drop('Unnamed: 0', axis=1)
+df = df.drop('CODE', axis=1)
+df = df.drop('code', axis=1)
 
 print(df)
 
@@ -39,7 +44,7 @@ df['sidx'] = targets
 
 print(df)
 
-df.to_csv('/home/osung/data/korean/patent/test_ms_manufact_msidx.tsv', 
+df.to_csv('/home/osung/data/korean/patent/train_summary_manufact_msidx.tsv', 
           sep='\t', index=False)
 
 
