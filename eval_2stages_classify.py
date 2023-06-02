@@ -48,42 +48,18 @@ df = pd.read_csv('klue_roberta_pth_list.csv')
 
 print(df)
 
-# LOAD ALL MODELS SIMULTANEOUSLY
-models = []
-
-for idx, row in df.iterrows() :
-    if row['size'] > 1 :
-        path = 'pths/' + row['pth_name']
-        model = load_model(path, model_name, row['size'], pretrained_model_config)
-        models.append(model)
-    else :
-        models.append(None)
-
-print(len(models))
-
-df['model'] = models
-
-'''
-print(df.iloc[0]['model'])
-print(df.iloc[3]['model'])
-print(df.iloc[5]['model'])
-print(df.iloc[8]['model']) '''
-
-
-'''
-# LOAD ONE MODEL ONLY AND REPLACE STATES IN REAL TIME
-# load the first model (mcode model)
+# load mcode model
 path = 'pths/' + df.iloc[0]['pth_name']
-model = load_model(path, model_name, df.iloc[0]['size'], pretrained_model_config)
-print(model)
+m_model = load_model(path, model_name, df.iloc[0]['size'], pretrained_model_config)
 
-# load following models (for scode)
+# load scode models
+s_models = {}
+
 for idx in range(1, len(df)) :
     if df.iloc[idx]['size'] > 1 :
         path = 'pths/' + df.iloc[idx]['pth_name']
-        model = replace_model(model, path, df.iloc[idx]['size'])
-
-print(model) '''
-
-       
+        model = load_model(path, model_name, df.iloc[idx]['size'], 
+                           pretrained_model_config)
+        s_models[idx-1] = model
+ 
 
