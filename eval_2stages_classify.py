@@ -38,6 +38,9 @@ def replace_model(model, path, num_labels) :
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
 model_name = 'klue/roberta-large'
 
+#train_path = '/home/osung/data/korean/patent/train_summary_manufact_msidx.tsv'
+test_path = '/home/osung/data/korean/patent/test_ms_manufact_msidx.tsv'
+
 device = torch.device('cuda')
 
 tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower=False,)
@@ -61,5 +64,14 @@ for idx in range(1, len(df)) :
         model = load_model(path, model_name, df.iloc[idx]['size'], 
                            pretrained_model_config)
         s_models[idx-1] = model
- 
+
+# load data
+#train_df = pd.read_csv(train_path, sep='\t')
+test_df = pd.read_csv(test_path, sep='\t')
+test_df = test_df.dropna()
+test_df = test_df.reset_index(drop=True)
+
+test_df = test_df[test_df['text'].str.len() >= 16]
+test_df = test_df.reset_index(drop=True)
+
 
