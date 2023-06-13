@@ -52,9 +52,10 @@ def get_args() :
     parser.add_argument('-m', '--model', type=str, required=True, help='Set the base model for training (mandatory)')
     parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
     parser.add_argument('-c', '--crt', type=str, help='Set the crt file for the certification')
-    parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
+    #parser.add_argument('-n', '--num_labels', type=int, default=2, help='Set number of labels to classify')
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
-    parser.add_argument('-v', '--variable', type=str, default='code', help='Set the variable to learn')
+    parser.add_argument('-v1', '--variable1', type=str, default='mcode', help='Set the first variable to learn')
+    parser.add_argument('-v2', '--variable2', type=str, default='scode', help='Set the second variable to learn')
     parser.add_argument('-f', '--code_file', type=str, help='Set the code file to read')
     parser.add_argument('-t', '--truncate', type=int, default=10, help='Truncate sentences less than minimum length')
     parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
@@ -115,11 +116,7 @@ if args.add_pad_token :
     tokenizer.padding_side = 'left'
 
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
-
-if args.num_labels > 2 :
-    pretrained_model_config.num_labels = args.num_labels 
-elif len(codes) > 0 :
-    pretrained_model_config.num_labels = len(codes)
+pretrained_model_config.num_labels = len(codes)
 
 print("Number of labels:", pretrained_model_config.num_labels)
     
@@ -149,12 +146,8 @@ model.load_state_dict(loaded_state_dict)
 print("Preparing test data")
 
 test_df = pd.read_csv(test_path, sep='\t')
-
-test_df.drop(test_df.columns[test_df.columns.str.contains('unnamed',case = False)],axis = 1, inplace = True)
 test_df = test_df.dropna()
 test_df = test_df.reset_index(drop=True)
-
-print(test_df)
 
 # 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
 if args.truncate > 1 :
@@ -169,6 +162,7 @@ print("target is", target)
 if target != 'code' and len(codes) > 0 :
     targets = []
     for idx, row in test_df.iterrows() :
+#targets.append(codes[str(row[target])])
         targets.append(codes[row[target]])
 
     test_df['code'] = targets
@@ -177,7 +171,6 @@ else :
     quit()
 
 print(test_df)
-#test_df.to_csv('test.tsv', sep='\t')
 
 print("Tokenizing test data")
 
