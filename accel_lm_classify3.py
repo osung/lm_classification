@@ -139,11 +139,12 @@ def main():
         model.config.pad_token_id = model.config.eos_token_id
     
     
+    '''
     # parallelization
     if torch.cuda.device_count() > 1:
         print(f'Using {torch.cuda.device_count()} GPUs.')
     
-        model = torch.nn.DataParallel(model)  
+        model = torch.nn.DataParallel(model)   '''
     
     model = model.to(device)
     
