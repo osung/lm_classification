@@ -14,7 +14,7 @@ from transformers import ElectraTokenizer, ElectraForSequenceClassification, Ele
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from Korpora import Korpora
+from accelerate.utils import MegatronLMDummyScheduler
 
 
 class TrainDataset(torch.utils.data.Dataset):
@@ -68,7 +68,11 @@ def get_args() :
 
 def main():
 
+    accelerator = Accelerator()
     device = accelerator.device
+
+    print(accelerator)
+    print(device)
 
     # process commandline arguments
     print("Processing commandline arguments");
@@ -140,10 +144,11 @@ def main():
     
     
     # parallelization
+    '''
     if torch.cuda.device_count() > 1:
         print(f'Using {torch.cuda.device_count()} GPUs.')
     
-        model = torch.nn.DataParallel(model)  
+        model = torch.nn.DataParallel(model)  '''
     
     model = model.to(device)
     
@@ -189,9 +194,15 @@ def main():
     optimizer = AdamW(model.parameters(), lr=5e-5)
     num_epochs = args.epoch
     num_training_steps = num_epochs * len(train_dataloader)
+
+#    if accelerator.distributed_type == DistributedType.MEGATRON_LM:
+#        lr_scheduler = MegatronLMDummyScheduler(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
+#    else :
+
     lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
-    
-    
+
+    print(lr_scheduler)
+
     model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(model, optimizer, train_dataloader, lr_scheduler)
     
     model.train()
@@ -212,7 +223,7 @@ def main():
     
             outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
     
-            loss = outputs.loss.mean()
+            loss = outputs.loss #.mean()
             logits = outputs.logits
     
             #loss.backward()
