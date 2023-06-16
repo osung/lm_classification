@@ -103,10 +103,9 @@ def main():
 
     train_df = pd.read_csv(train_path, sep='\t')
     train_df = train_df.dropna()
-    #train_df = train_df.reset_index(drop=True)
-    train_df = train_df.sample(frac=1).reset_index(drop=True)
-
-    train_df = train_df[:1000]
+    train_df = train_df.reset_index(drop=True)
+    #train_df = train_df.sample(frac=1).reset_index(drop=True)
+    #train_df = train_df[:1000]
 
     target = args.variable
     
