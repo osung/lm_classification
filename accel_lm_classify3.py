@@ -14,7 +14,7 @@ from transformers import ElectraTokenizer, ElectraForSequenceClassification, Ele
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from Korpora import Korpora
+from accelerate.utils import MegatronLMDummyScheduler
 
 
 class TrainDataset(torch.utils.data.Dataset):
@@ -68,7 +68,11 @@ def get_args() :
 
 def main():
 
+    accelerator = Accelerator()
     device = accelerator.device
+
+    print(accelerator)
+    print(device)
 
     # process commandline arguments
     print("Processing commandline arguments");
@@ -99,7 +103,10 @@ def main():
 
     train_df = pd.read_csv(train_path, sep='\t')
     train_df = train_df.dropna()
-    train_df = train_df.reset_index(drop=True)
+    #train_df = train_df.reset_index(drop=True)
+    train_df = train_df.sample(frac=1).reset_index(drop=True)
+
+    train_df = train_df[:1000]
 
     target = args.variable
     
@@ -144,31 +151,12 @@ def main():
     if torch.cuda.device_count() > 1:
         print(f'Using {torch.cuda.device_count()} GPUs.')
     
-        model = torch.nn.DataParallel(model)   '''
+        model = torch.nn.DataParallel(model)  '''
     
     model = model.to(device)
     
     # process resume file if any
     resume_no = 0
-    
-    if args.resume is None :
-        pth_name = model_name + '_' + args.train + '_' + target + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.pth'
-    else :
-        resume_name = os.path.basename(args.resume)
-        pth_name = os.path.splitext(resume_name)[0] + '.pth'
-    
-        print("resume_name is", resume_name)
-        print("pth_name is", pth_name)
-        
-        last_underscore_index = resume_name.rfind("_")
-        if last_underscore_index != -1:
-            resume_no = int(resume_name[last_underscore_index +1:]) + 1
-    
-        print("resume no is", resume_no)
-    
-        # load pretrained model
-        loaded_state_dict = torch.load(resume_name)
-        model.load_state_dict(loaded_state_dict)
     
     # 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
     if args.truncate > 1 :
@@ -190,10 +178,37 @@ def main():
     optimizer = AdamW(model.parameters(), lr=5e-5)
     num_epochs = args.epoch
     num_training_steps = num_epochs * len(train_dataloader)
+
+#    if accelerator.distributed_type == DistributedType.MEGATRON_LM:
+#        lr_scheduler = MegatronLMDummyScheduler(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
+#    else :
+
     lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
-    
-    
+
+    print(lr_scheduler)
+
     model, optimizer, train_dataloader, lr_scheduler = accelerator.prepare(model, optimizer, train_dataloader, lr_scheduler)
+
+    if args.resume is None :
+        pth_name = model_name + '_' + args.train + '_' + target + '_b' + str(args.batch) + '_e' + str(args.epoch) + '_ml' + str(args.max_length) + '_' + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') #+ '.pth'
+    else :
+        resume_name = os.path.basename(args.resume)
+        pth_name = os.path.splitext(resume_name)[0] # + '.pth'
+    
+        print("resume_name is", resume_name)
+        print("pth_name is", pth_name)
+        
+        last_underscore_index = resume_name.rfind("_")
+        if last_underscore_index != -1:
+            resume_no = int(resume_name[last_underscore_index +1:]) + 1
+    
+        print("resume no is", resume_no)
+    
+        # load pretrained model
+        #loaded_state_dict = torch.load(resume_name)
+        #model.load_state_dict(loaded_state_dict)
+        print("loading state", resume_name)
+        accelerator.load_state(resume_name)
     
     model.train()
     
@@ -213,7 +228,7 @@ def main():
     
             outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
     
-            loss = outputs.loss.mean()
+            loss = outputs.loss #.mean()
             logits = outputs.logits
     
             #loss.backward()
@@ -231,9 +246,14 @@ def main():
         if args.save_every_iter :
             formatted_epoch = '_%02d' % epoch
             print('saved pth file :', pth_name+formatted_epoch)
-            torch.save(model.state_dict(), pth_name+formatted_epoch) # save pth at every epoch
+            #torch.save(model.state_dict(), pth_name+formatted_epoch) # save pth at every epoch
+            out_dir = pth_name + formatted_epoch
+            print("out_dir:", out_dir)
+
+            accelerator.save_state(out_dir)
     
-    torch.save(model.state_dict(), pth_name)
+    #torch.save(model.state_dict(), pth_name)
+    accelerator.save_state(pth_name)
     
     #model.save_pretrained("patent_koelastic")
     

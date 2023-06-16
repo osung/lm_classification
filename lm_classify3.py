@@ -13,7 +13,6 @@ from transformers import ElectraTokenizer, ElectraForSequenceClassification, Ele
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from Korpora import Korpora
 
 
 class TrainDataset(torch.utils.data.Dataset):
