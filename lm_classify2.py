@@ -157,7 +157,7 @@ if args.add_pad_token :
 
 # parallelization
 if torch.cuda.device_count() > 1:
-    print(f'Using {torch.cuda.device_count()} GPUs.')
+    #print(f'Using {torch.cuda.device_count()} GPUs.')
 
     model = torch.nn.DataParallel(model)  
 
