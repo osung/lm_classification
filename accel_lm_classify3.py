@@ -178,10 +178,6 @@ def main():
     num_epochs = args.epoch
     num_training_steps = num_epochs * len(train_dataloader)
 
-#    if accelerator.distributed_type == DistributedType.MEGATRON_LM:
-#        lr_scheduler = MegatronLMDummyScheduler(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
-#    else :
-
     lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
 
     print(lr_scheduler)
