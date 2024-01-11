@@ -9,6 +9,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import AdamW
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoConfig
+from tokenization_korscideberta_v2 import DebertaV2Tokenizer
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -46,7 +47,6 @@ def get_args() :
     parser.add_argument('-tr', '--train', type=str, required=True, help='Set train data (mandatory)')
     parser.add_argument('-te', '--test', type=str, help='Set test data')
     parser.add_argument('-d', '--dir', type=str, help='Set a base directory for the train and test data')
-    parser.add_argument('-m', '--model', type=str, help='Set the base model for training')
     parser.add_argument('-v', '--variable', type=str, default='code', help='Set the target variable to learn')
     parser.add_argument('-e', '--epoch', type=int, default=5, help='Set number of epochs for the training')
     parser.add_argument('-b', '--batch', type=int, default=32, help='Set number of batchs for the training')
@@ -89,7 +89,9 @@ if args.test is None :
 else :
     test_path = base_dir + '/' + args.test
 
-model_name = args.model.replace('/', '_')
+args_model = 'kisti/korscideberta'
+model_name = args_model.replace('/', '_')
+
 
 if args.crt is not None :
     os.environ['CURL_CA_BUNDLE'] = args.crt
@@ -113,9 +115,6 @@ if target != 'code' :
     codes = {}    # dict to store pairs of KSIC and int code to learn
     targets = []  # list
 
-    # make header
-    codes[target] = 'code'
-
     for idx, row in train_df.iterrows() :
         if not row[target] in codes.keys() :
             codes[row[target]] = len(codes)
@@ -134,23 +133,28 @@ if target != 'code' :
 # set model
 print("Setting model")
 
-tokenizer = AutoTokenizer.from_pretrained(
-    args.model, do_lower_case=False,
-)
+#tokenizer = AutoTokenizer.from_pretrained(
+#   args_model, do_lower_case=False,
+#)
+
+
+tokenizer = DebertaV2Tokenizer.from_pretrained(args_model)
 
 if args.add_pad_token :
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'left'
 
-pretrained_model_config = AutoConfig.from_pretrained(args.model)
+pretrained_model_config = AutoConfig.from_pretrained(args_model)
 
 pretrained_model_config.num_labels = train_df['code'].nunique()
 print("num_labels :", pretrained_model_config.num_labels)
 
-model = AutoModelForSequenceClassification.from_pretrained(
-    args.model,
-    config=pretrained_model_config,
-)
+model = AutoModelForSequenceClassification.from_pretrained(args_model, config=pretrained_model_config)
+
+#model = AutoModelForSequenceClassification.from_pretrained(
+#    args_model,
+#    config=pretrained_model_config,
+#)
 
 if args.add_pad_token :
     model.config.pad_token_id = model.config.eos_token_id
@@ -247,54 +251,4 @@ for epoch in range(resume_no, num_epochs):
 
 torch.save(model.state_dict(), pth_name)
 
-#model.save_pretrained("patent_koelastic")
-
-# evaluation
-'''
-print("Preparing test data")
-
-test_df = pd.read_csv(test_path, sep='\t')
-test_df = test_df.dropna()
-test_df = test_df.reset_index(drop=True)
-
-# 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
-if args.truncate > 1 :
-    test_df = test_df[test_df['text'].str.len() >= args.truncate]
-    test_df = test_df.reset_index(drop=True)
-
-print(test_df)
-
-print("Tokenizing test data")
-
-test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, test_df['text'].tolist(), test_df['code'], max_length=args.max_length)
-
-print("Generating torch tensor from the tokenized test data")
-
-test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
-test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch)
-
-print("Evaluating model using test data")
-
-model.eval()
-
-y_true = []
-y_pred = []
-
-for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
-    b_input_ids = batch[0].to(device)
-    b_input_mask = batch[1].to(device)
-    b_labels = batch[2].to(device)
-
-    with torch.no_grad():
-        outputs = model(b_input_ids, attention_mask=b_input_mask)
-
-    logits = outputs.logits
-    _, predicted = torch.max(logits, dim=1)
-
-    y_true.extend(b_labels.tolist())
-    y_pred.extend(predicted.tolist())
-
-accuracy = accuracy_score(y_true, y_pred)
-print(f'Accuracy: {accuracy}')
-'''
 

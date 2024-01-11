@@ -7,7 +7,8 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import AdamW
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, AutoConfig
+from transformers import AutoModelForSequenceClassification, AutoConfig
+from tokenization_korscideberta_v2 import DebertaV2Tokenizer
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score
@@ -81,7 +82,8 @@ if args.test is None :
 else :
     test_path = base_dir + '/' + args.test
 
-model_name = args.model.replace('/', '_')
+args_model = 'kisti/korscideberta'
+model_name = args_model.replace('/', '_')
 
 if args.crt is not None :
     os.environ['CURL_CA_BUNDLE'] = args.crt
@@ -89,9 +91,7 @@ if args.crt is not None :
 # set model
 print("Setting model")
 
-tokenizer = AutoTokenizer.from_pretrained(
-    args.model, do_lower_case=False,
-)
+tokenizer = DebertaV2Tokenizer.from_pretrained(args_model)
 
 if args.add_pad_token :
     tokenizer.pad_token = tokenizer.eos_token
@@ -99,12 +99,12 @@ if args.add_pad_token :
 
 target = args.variable
 
-# load taget code 
-if args.code_csv : 
+ load taget code
+if args.code_csv :
     code_df = pd.read_csv(args.code_csv)
 #print(code_df)
 
-    num_labels = len(code_df) 
+    num_labels = len(code_df)
 
     codes = dict(zip(code_df[target], code_df['code']))
 
@@ -125,6 +125,7 @@ if not target in test_df.keys() :
     quit()
 
 if target != 'code' :
+    codes = {}    # dict to store pairs of KSIC and int code to learn
     targets = []  # list
 
     for idx, row in test_df.iterrows() :
@@ -140,10 +141,10 @@ if args.truncate > 1 :
 
 print(test_df)
 
-pretrained_model_config = AutoConfig.from_pretrained(args.model)
+pretrained_model_config = AutoConfig.from_pretrained(args_model)
 pretrained_model_config.num_labels = num_labels #44 #(mid) #118 (small)  #564 
 model = AutoModelForSequenceClassification.from_pretrained(
-    args.model,
+    args_model,
     config=pretrained_model_config,
 )
 
