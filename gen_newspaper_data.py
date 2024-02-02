@@ -11,7 +11,7 @@ pest_code = {
     'IT/과학': 3,
     '기타': -1}
 
-raw_dir = '/home/osung/data/korean/modu/nikl_newpaper_2009_2018/'
+raw_dir = '/home/osung/data/korean/modu/modu_newspaper/'
 
 news_dicts = []
 

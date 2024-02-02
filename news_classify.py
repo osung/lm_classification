@@ -12,6 +12,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, Auto
 from transformers import get_linear_schedule_with_warmup
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import gc
 
 
 class TrainDataset(torch.utils.data.Dataset):
@@ -30,6 +31,54 @@ class TrainDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.input_ids)
 
+
+def batch_encode(text, max_seq_len):
+    for i in range(0, len(trainq_list), batch_size):
+        encoded_sent = tokenizer.batch_encode_plus(
+            text,
+            max_length = max_seq_len,
+            pad_to_max_length=True,
+            truncation=True,
+            return_token_type_ids=False)
+      
+    return encoded_sent
+
+
+
+def get_encode_data_chunked(tokenizer, sentences, labels, max_length=128):
+    #청크 크기 정의
+    chunk_size = 100000
+
+    # 문장과 레이블을 청크로 나누고 처리
+    tokenized_iids = None # input id
+    tokenized_ams = None  # attention mask
+    for i in tqdm(range(0, len(sentences), chunk_size)):
+        chunk_sentences = sentences[i:i+chunk_size]
+
+        # 청크를 tokenize
+        encoding_result = tokenizer.batch_encode_plus(
+            chunk_sentences,
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+            return_tensors="pt")
+
+        if tokenized_iids is None:
+            tokenized_iids = encoding_result['input_ids']
+            tokenized_ams = encoding_result['attention_mask']
+        else :
+            tokenized_iids = torch.cat((tokenized_iids, encoding_result['input_ids']), dim=0)
+            tokenized_ams = torch.cat((tokenized_ams, encoding_result['attention_mask']), dim=0)
+
+        gc.collect()
+
+    labels = torch.tensor(labels)
+
+    gc.collect()
+    
+    return tokenized_iids, tokenized_ams, labels
+
+    
 
 def get_encode_data(tokenizer, sentences, labels, max_length=128):
     encoded_inputs = tokenizer(sentences, padding=True, truncation=True, max_length=max_length)
@@ -195,7 +244,8 @@ print(train_df)
 
 print("Tokenizing train data")
 
-train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'], max_length=args.max_length)
+train_input_ids, train_attention_masks, train_labels = get_encode_data_chunked(tokenizer, train_df['text'].tolist(), train_df['code'], max_length=args.max_length)
+#train_input_ids, train_attention_masks, train_labels = get_encode_data(tokenizer, train_df['text'].tolist(), train_df['code'], max_length=args.max_length)
 
 print("Generating torch tensor from the tokenized train data")
 

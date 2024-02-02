@@ -61,40 +61,45 @@ if torch.cuda.device_count() > 1:
 
 model = model.to(device)
 
-train_df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
-train_df = train_df.dropna()
-train_df = train_df.reset_index(drop=True)
+#df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
+df = pd.read_csv('/home/osung/data/korean/kmaps_corpus/merged_text.tsv', sep='\t')
+df = df.dropna()
+df = df.reset_index(drop=True)
 
-train_df = train_df[train_df['text'].str.len() >= 300]
-train_df = train_df.reset_index(drop=True)
+target_df = df[df['text'].str.len() >= MAX_TOKEN * 0.7]
+target_df = target_df.reset_index(drop=True)
 
-#train_df['summary'] = pd.Series(dtype='string')
+#target_df['summary'] = pd.Series(dtype='string') 
 
-print(train_df)
+print(target_df)
 
-train_input_ids, train_attention_masks = get_encode_data(tokenizer, train_df['text'].tolist())
+input_ids, attention_masks = get_encode_data(tokenizer, target_df['text'].tolist())
 
 print("Generating toch tensor from the tokenized data")
 
 
-
 count = 0
-for index, row in train_df.iterrows():
+for index, row in target_df.iterrows():
     encode_len = get_encode_length(tokenizer, row['text'])
 
-    if encode_len > MAX_TOKEN :
-        response = summarize(row['text'], tokenizer, model.module)
-        train_df.at[index, 'summary'] = response
-        count += 1
+#if encode_len > MAX_TOKEN :
+    response = summarize(row['text'], tokenizer, model.module)
+    target_df.at[index, 'summary'] = response
+    count += 1
 
     if index % 10 == 9 :
-        print(str(index), 'of', str(len(train_df)), ':', str(count), 'sentences are summarized so far')
+        print(str(index), 'of', str(len(target_df)), ':', str(count), 'sentences are summarized so far')
 
-    if index % 100 == 99 :
-        train_df.to_csv("train_summary_" + str(index) + ".tsv", index=False, sep='\t')
+#if index % 100 == 99 :
+#target_df.to_csv("train_summary_" + str(index) + ".tsv", index=False, sep='\t')
 
-print(train_df)
+target_df['len'] = target_df['text'].apply(len)
+target_df['summary_len'] = target_df['summary'].apply(len)
 
-train_df.to_csv('train_summary.tsv', index=False, sep='\t')
+#print(target_df)
+
+target_df.to_csv('eenzeenee_t5_summary.tsv', index=False, sep='\t')
+
+print(target_df[target_df['len'] <= target_df['summary_len']])
 
 

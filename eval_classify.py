@@ -55,6 +55,7 @@ def get_args() :
     parser.add_argument('-l', '--max_length', type=int, default=128, help='Set max length of the sentences')
     parser.add_argument('-t', '--truncate', type=int, default=10, help='Truncate sentences less than minimum length')
     parser.add_argument('--add_pad_token', action='store_true', help='Add PAD token to the tokenizer')
+    parser.add_argument('-w', '--write', type=str, help='Set the file name to write incorrectly predicted data')
 
     args = parser.parse_args()
 
@@ -115,10 +116,9 @@ else :
 print("num_labels is ", num_labels)
 
 # load test data
-test_df = pd.read_csv(test_path, sep='\t')
+test_df = pd.read_csv(test_path, sep='\t') #.head(50)
 test_df = test_df.dropna()
 test_df = test_df.reset_index(drop=True)
-
 
 if not target in test_df.keys() :
     print('No', target, 'in the loaded dataframe')
@@ -138,6 +138,7 @@ if args.truncate > 1 :
     test_df = test_df[test_df['text'].str.len() >= args.truncate]
     test_df = test_df.reset_index(drop=True)
 
+#test_df = test_df.drop(columns=['Unnamed: 0'])
 print(test_df)
 
 pretrained_model_config = AutoConfig.from_pretrained(args.model)
@@ -175,7 +176,7 @@ test_input_ids, test_attention_masks, test_labels = get_encode_data(tokenizer, t
 print("Generating torch tensor from the tokenized test data")
 
 test_dataset = TrainDataset(test_input_ids, test_attention_masks, test_labels)
-test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch, shuffle=True)
+test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch, shuffle=False)
 
 print("Evaluating model using test data")
 
@@ -199,12 +200,17 @@ for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
 
     y_true.extend(b_labels.tolist())
     y_pred.extend(predicted.tolist())
+    
 
 y_df = pd.DataFrame({'y_true': y_true, 'y_pred': y_pred})
-#print(y_df)
 
 correct = len(y_df[y_df['y_true'] == y_df['y_pred']])
 print(f'Correct num: {correct}')
+
+incorrect = len(y_df[y_df['y_true'] != y_df['y_pred']])
+print(f'Incorrect num: {incorrect}')
+
+
 cal_accuracy = correct / len(y_df)
 
 print(f'Calculated Accuracy: {cal_accuracy}')
@@ -212,9 +218,10 @@ print(f'Calculated Accuracy: {cal_accuracy}')
 accuracy = accuracy_score(y_true, y_pred)
 print(f'Accuracy: {accuracy}')
 
-#precision = precision_score(y_true, y_pred)
-#print(f'Precision: {precision}')
+if args.write is not None :
+    test_df['prediction'] = y_df['y_pred']
+#test_df['true'] = y_df['y_true']
+    incorrect_df = test_df[test_df['prediction'] != test_df['code']]
+    incorrect_df.to_csv(base_dir + '/' + args.write, sep='\t')
 
-#recall = recall_score(y_true, y_pred)
-#print(f'Recall: {recall}')
 

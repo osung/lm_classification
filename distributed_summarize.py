@@ -94,7 +94,8 @@ model = DistributedDataParallel(model)
 print("Loading tsv data")
 #df = pd.read_csv('/home01/hpc56a01/scratch/data/aihub/patent/train_mid2.tsv', sep='\t')
 #df = pd.read_csv('/home/osung/data/korean/patent/train_mid2.tsv', sep='\t')
-df = pd.read_csv('/home/osung/data/korean/patent/test_mid2.tsv', sep='\t')
+#df = pd.read_csv('/home/osung/data/korean/patent/test_mid2.tsv', sep='\t')
+df = pd.read_csv('/home/osung/data/korean/kmaps_corpus/merged_text.tsv', sep='\t')
 df = df.dropna()
 df = df.reset_index(drop=True)
 print("Done")
@@ -167,6 +168,14 @@ for idx, row in df[start_idx:].iterrows() :
 print("[", rank, "]", "Summarization is done")
 
 df['summary'] = outputs
+
+df['len'] = df['text'].apply(len)
+df['summary_len'] = df['summary'].apply(len)
+
+#print(target_df)
+
+print(df[df['len'] <= df['summary_len']])
+
 csv_name = out_name + '.tsv'
 df.to_csv(csv_name, index=False, sep='\t')
 
