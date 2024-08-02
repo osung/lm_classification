@@ -148,8 +148,15 @@ if args.crt is not None :
 print("Preparing train data")
 
 train_df = pd.read_csv(train_path, sep='\t')
-train_df = train_df.dropna()
+#train_df = train_df.dropna()
+
+train_df = train_df.sample(frac=1).reset_index(drop=True)
+train_df = train_df[:1024]
+train_df = train_df.drop(columns=['id', 'max_scores', 'ksic'])
 train_df = train_df.reset_index(drop=True)
+
+train_df['text'] = train_df['text'].str.slice(0, 1024)
+    
 
 #target = 'code'
 target = args.variable

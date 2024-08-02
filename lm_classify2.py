@@ -101,7 +101,11 @@ if args.crt is not None :
 print("Preparing train data")
 
 train_df = pd.read_csv(train_path, sep='\t')
+
+train_df = train_df.drop(columns=['id', 'max_scores', 'ksic'])
+train_df['text'] = train_df['text'].str.slice(0, 2048)
 train_df = train_df.dropna()
+
 train_df = train_df.reset_index(drop=True)
 
 #target = 'code'
@@ -158,7 +162,6 @@ if args.add_pad_token :
 # parallelization
 if torch.cuda.device_count() > 1:
     #print(f'Using {torch.cuda.device_count()} GPUs.')
-
     model = torch.nn.DataParallel(model)  
 
 model = model.to(device)
@@ -209,7 +212,7 @@ lr_scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, nu
 
 model.train()
 
-print("range is", resume_no, ", ", num_epochs)
+print("resume range is", resume_no, ", ", num_epochs)
 print(range(resume_no, num_epochs))
 
 for epoch in range(resume_no, num_epochs):
