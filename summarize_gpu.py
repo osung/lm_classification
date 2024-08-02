@@ -40,8 +40,9 @@ def summarize(input_text, tokenizer, model) :
     
     return response
 
-#os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name = 'eenzeenee/t5-base-korean-summarization'
+os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
+#model_name = 'eenzeenee/t5-base-korean-summarization'
+model_name = 'psyche/KoT5-summarization'
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -98,7 +99,8 @@ target_df['summary_len'] = target_df['summary'].apply(len)
 
 #print(target_df)
 
-target_df.to_csv('eenzeenee_t5_summary.tsv', index=False, sep='\t')
+#target_df.to_csv('eenzeenee_t5_summary.tsv', index=False, sep='\t')
+target_df.to_csv('psyche_KoT5.tsv', index=False, sep='\t')
 
 print(target_df[target_df['len'] <= target_df['summary_len']])
 

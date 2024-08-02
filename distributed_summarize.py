@@ -50,8 +50,8 @@ cont_idx = [112000, 112000, 112000, 104000] #10000, 8000, 8000, 9000]
 cont_file = ['summary_data_0_111999.pkl', 'summary_data_1_111999.pkl', 'summary_data_2_111999.pkl', 'summary_data_3_103999.pkl']
 
 os.environ['CURL_CA_BUNDLE'] = '/home/osung/Downloads/kisti_cert.crt'
-model_name = 'eenzeenee/t5-base-korean-summarization'
-#model_name = 'psyche/KoT5-summarization'
+#model_name = 'eenzeenee/t5-base-korean-summarization'
+model_name = 'psyche/KoT5-summarization'
 
 
 # 분산 학습을 위해 초기화
