@@ -102,11 +102,16 @@ print("Preparing train data")
 
 train_df = pd.read_csv(train_path, sep='\t')
 
-train_df = train_df.drop(columns=['id', 'max_scores', 'ksic'])
-train_df['text'] = train_df['text'].str.slice(0, 2048)
+train_df['text'] = train_df['text']
+#.str.slice(0, 2048)
 train_df = train_df.dropna()
+#train_df = train_df.sample(frac=0.7)
 
-train_df = train_df.reset_index(drop=True)
+#train_df.to_csv('train_data.tsv', sep='\t')
+
+#print(train_df['topic'].value_counts())
+
+#train_df = train_df.reset_index(drop=True)
 
 #target = 'code'
 target = args.variable
@@ -116,16 +121,9 @@ if not target in train_df.keys() :
     quit()
 
 if target != 'code' :
-    codes = {}    # dict to store pairs of KSIC and int code to learn
-    targets = []  # list
+    codes = {False:0, True:1}    # dict to store boolean to learn
 
-    for idx, row in train_df.iterrows() :
-        if not row[target] in codes.keys() :
-            codes[row[target]] = len(codes)
-
-        targets.append(codes[row[target]])
-
-    train_df['code'] = targets
+    train_df['code'] = train_df[target].astype(int)
 
     # write code to the csv file
     filename =  model_name + '_' + args.train + '_' + target +'_code.csv'
@@ -252,7 +250,6 @@ torch.save(model.state_dict(), pth_name)
 #model.save_pretrained("patent_koelastic")
 
 # evaluation
-'''
 print("Preparing test data")
 
 test_df = pd.read_csv(test_path, sep='\t')
@@ -298,5 +295,5 @@ for batch in tqdm(test_dataloader, desc='Evaluating', leave=False):
 
 accuracy = accuracy_score(y_true, y_pred)
 print(f'Accuracy: {accuracy}')
-'''
+
 

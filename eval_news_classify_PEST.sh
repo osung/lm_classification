@@ -1,19 +1,11 @@
 #!/bin/bash
 
-#model='monologg/koelectra-base-v3-discriminator'
-#b_model=64
-#code_csv='saves/monologg_koelectra-base-v3-discriminator_train_PEST.tsv_PEST_code.csv'
-#pth_file="saves/monologg_koelectra-base-v3-discriminator_train_PEST.tsv_PEST_b64_e10_ml256_20240104_171312.pth"
-
-#model='snunlp/KR-SBERT-V40K-klueNLI-augSTS'
-#b_model=128
-#code_csv='saves/snunlp_KR-SBERT-V40K-klueNLI-augSTS_train_PEST.tsv_PEST_code.csv'
-#pth_file='saves/snunlp_KR-SBERT-V40K-klueNLI-augSTS_train_PEST.tsv_PEST_b128_e10_ml256_20240108_130953.pth'
-
 model='klue/roberta-base'
 b_model=128
-code_csv='saves/klue_roberta-base_train_PEST.tsv_PEST_code.csv'
-pth_file='saves/klue_roberta-base_train_PEST.tsv_PEST_b128_e10_ml256_20240108_164959.pth'
+length=256
+#pth_file='pths/klue_roberta-base_news_PEST_train_ksic_score_clean.tsv_topic_b128_e10_ml256_20240802_185749.pth'
+pth_file='klue_roberta-base_news_PEST_ksic_score_clean.tsv_topic_b128_e20_ml256_20240805_202050.pth'
 
-    echo "python eval_classify.py -te test_PEST.tsv -d /home/osung/data/korean/kmaps_corpus -m $model -b $b_model -v PEST -l 256 -t 16 -c /home/osung/Downloads/kisti_cert.crt -C $code_csv $pth_file"
-    python eval_classify.py -te 'test_PEST.tsv' -d /home/osung/data/korean/kmaps_corpus -m $model -b $b_model -v PEST -l 256 -t 16 -c /home/osung/Downloads/kisti_cert.crt -C $code_csv $pth_file
+echo "python eval_classify2.py -te 'news_PEST_test_ksic_score_clean.tsv' -d /home/osung/data/korean/modu/json -m $model -b $b_model -v topic -l $length -t 16 -c /home/osung/Downloads/kisti_cert.crt -n 4 -f klue_roberta-base_news_PEST_ksic_score_clean.tsv_topic_code.csv $pth_file"
+
+python eval_classify2.py -te 'news_PEST_train_ksic_score_clean.tsv' -d /home/osung/data/korean/modu/json -m $model -b $b_model -v topic -l $length -t 16 -c /home/osung/Downloads/kisti_cert.crt -n 4 -f klue_roberta-base_news_PEST_ksic_score_clean.tsv_topic_code.csv $pth_file

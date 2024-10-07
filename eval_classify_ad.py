@@ -121,6 +121,10 @@ if args.num_labels > 2 :
 elif len(codes) > 0 :
     pretrained_model_config.num_labels = len(codes)
 
+codes[True] = codes['True']
+codes[False] = codes['False']
+
+
 print("Number of labels:", pretrained_model_config.num_labels)
     
 model = AutoModelForSequenceClassification.from_pretrained(
@@ -155,7 +159,7 @@ test_df = test_df.dropna()
 #test_df = test_df.sample(frac=0.1)
 test_df = test_df.reset_index(drop=True)
 
-print(test_df)
+#print(test_df)
 
 # 'text' column의 문자열 길이가 args.truncate 이하인 row 삭제
 if args.truncate > 1 :
@@ -178,7 +182,7 @@ else :
     print('Invalid code file')
     quit()
 
-#print(test_df)
+print(test_df)
 #test_df.to_csv('test.tsv', sep='\t')
 
 print("Tokenizing test data")
